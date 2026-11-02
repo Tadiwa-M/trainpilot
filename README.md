@@ -11,6 +11,14 @@ tpilot status [RUN]                                            # epochs done, be
 tpilot review RUN                                              # facts from code + LLM's next-run proposal (not launched)
 ```
 
+## Training Console — `tpilot ui`
+One page for both agents, at http://127.0.0.1:8770: **① Data → ② Plan → ③ Runs**. The current dataset
+is carried between steps, so switching from the data agent to the training agent is one click
+("Continue to Plan"). The plan is an editable form with each value's allowed range and the agent's
+reasoning; **Approve & launch** shows a confirmation summary first. Runs show live progress with a
+per-epoch mAP sparkline, **Stop** (confirmed) and **Review**, whose proposal loads back into Plan. An
+activity feed shows everything both agents do, as it happens.
+
 ## Guardrails (in code, not in the prompt)
 - **Data gate:** `run` executes every dataset-gate check first; any FAIL blocks the launch and the gate
   report is kept in the run folder.

@@ -41,7 +41,13 @@ def main(argv: list[str] | None = None) -> int:
     v = sub.add_parser("review")
     v.add_argument("run")
     v.add_argument("--llm", default="qwen2.5:3b")
+    u = sub.add_parser("ui", help="one console for both agents: Data -> Plan -> Runs")
+    u.add_argument("--port", type=int, default=8770)
     a = ap.parse_args(argv)
+    if a.cmd == "ui":
+        from .ui import serve
+        serve(a.port, Path(a.home))
+        return 0
     home = Path(a.home)
     (home / "plans").mkdir(parents=True, exist_ok=True)
     (home / "runs").mkdir(parents=True, exist_ok=True)
