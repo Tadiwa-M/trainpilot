@@ -45,17 +45,35 @@ class RunSpec:
     notes: str = ""                      # why this run exists (the planner's reasoning)
 
 
+def rule_limits() -> dict:
+    """LIMITS intersected with `limits: {field: [lo, hi]}` from your rules file: rules can only tighten."""
+    try:
+        from dsgate.rules import load
+        extra = load().get("limits") or {}
+    except Exception:  # noqa: BLE001 — no dsgate / broken rules file: built-in limits
+        extra = {}
+    out = dict(LIMITS)
+    for k, v in extra.items():
+        if k in out and isinstance(v, (list, tuple)) and len(v) == 2:
+            lo, hi = out[k]
+            nlo, nhi = max(lo, float(v[0])), min(hi, float(v[1]))
+            if nlo <= nhi:
+                out[k] = (nlo, nhi)
+    return out
+
+
 def validate(spec: RunSpec) -> list[str]:
-    """Clamp numeric fields into LIMITS, fix the obvious, return a list of what was changed/refused."""
+    """Clamp numeric fields into LIMITS (narrowed by your rules file's `limits:`, never widened), fix the obvious,
+    return a list of what was changed/refused."""
     notes = []
-    for k, (lo, hi) in LIMITS.items():
+    for k, (lo, hi) in rule_limits().items():
         v = getattr(spec, k)
         if v is None:
             continue
         cast = int if k in INT_FIELDS else float
         nv = cast(min(max(float(v), lo), hi))
         if nv != v:
-            notes.append(f"{k}: {v} -> {nv} (allowed {lo}..{hi})")
+            notes.append(f"{k}: {v} -> {nv} (allowed {lo}..{hi}{' by your rules' if LIMITS[k] != (lo, hi) else ''})")
         setattr(spec, k, nv)
     if spec.imgsz % 32:
         nv = int(round(spec.imgsz / 32) * 32)

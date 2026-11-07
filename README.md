@@ -12,12 +12,14 @@ tpilot review RUN                                              # facts from code
 ```
 
 ## Training Console — `tpilot ui`
-One page for both agents, at http://127.0.0.1:8770: **① Data → ② Plan → ③ Runs**. The current dataset
-is carried between steps, so switching from the data agent to the training agent is one click
-("Continue to Plan"). The plan is an editable form with each value's allowed range and the agent's
-reasoning; **Approve & launch** shows a confirmation summary first. Runs show live progress with a
-per-epoch mAP sparkline, **Stop** (confirmed) and **Review**, whose proposal loads back into Plan. An
-activity feed shows everything both agents do, as it happens.
+One page for both agents, at http://127.0.0.1:8770: **① Data → ② Plan → ③ Runs**, carrying the dataset between
+steps. **Drop a dataset folder or .zip, a manifest or weights** onto the fields (or paste paths). A live card
+always shows which agent is working, its current stage (e.g. Read data → Model proposes → Code checks limits →
+Ready for you), what the model is writing and its stated reasoning, with **Stop** where stopping is safe. The
+activity feed records both agents and what you did (filter by agent). The plan is an editable form with each
+value's allowed range; **Approve & launch** shows a confirmation summary, and outside your training window it
+asks you to confirm the GPU is free. Runs show live progress with a per-epoch mAP sparkline, **Stop**
+(confirmed) and **Review**, whose proposal loads back into Plan.
 
 ## Guardrails (in code, not in the prompt)
 - **Data gate:** `run` executes every dataset-gate check first; any FAIL blocks the launch and the gate
@@ -29,8 +31,13 @@ activity feed shows everything both agents do, as it happens.
 - **A person approves every launch:** `plan` and `review` only write spec files; only `tpilot run <spec>` trains.
 - **Facts before prose:** `review` writes the metrics summary itself; the model's comment is added only when
   it is real text, and no next run is proposed for a failed run.
+- **Your rules** (`~/.agent-rules.yaml`, shared with dataset-gate, see its `rules.example.yaml`):
+  `limits` narrow the hard limits (never widen them), `gpu.train_window` refuses GPU launches outside the window
+  unless you override (`--override-window` / the console checkbox), `gpu.min_free_vram_gb` raises the free-memory
+  floor, `privacy.local_only` starts training offline and refuses weights that would be downloaded, and
+  `planner_notes` reach the model as preferences.
 - **Auditable runs:** each run folder holds `run.yaml`, the exact `data.yaml` used, the gate report,
-  the rendered `train.py`, the log and the pid.
+  `rules_applied.json`, the rendered `train.py`, the log and the pid.
 
 ## Setup
 ```bash

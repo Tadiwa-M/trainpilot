@@ -36,11 +36,18 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("run")
     r.add_argument("spec")
     r.add_argument("--dry-run", action="store_true", help="gate + render only, don't train")
+    r.add_argument("--override-window", action="store_true", help="GPU is free: launch outside your rules' window")
     s = sub.add_parser("status")
     s.add_argument("run", nargs="?")
     v = sub.add_parser("review")
     v.add_argument("run")
     v.add_argument("--llm", default="qwen2.5:3b")
+    e = sub.add_parser("eval", help="score the planner's raw proposals and the reviews")
+    e.add_argument("--dataset", action="append", required=True)
+    e.add_argument("--base", required=True)
+    e.add_argument("--out", required=True)
+    e.add_argument("--repeats", type=int, default=2)
+    e.add_argument("--llm", default="qwen2.5:3b")
     u = sub.add_parser("ui", help="one console for both agents: Data -> Plan -> Runs")
     u.add_argument("--port", type=int, default=8770)
     a = ap.parse_args(argv)
@@ -49,6 +56,12 @@ def main(argv: list[str] | None = None) -> int:
         serve(a.port, Path(a.home))
         return 0
     home = Path(a.home)
+    if a.cmd == "eval":
+        from .evaluate import evaluate
+        r = evaluate(a.dataset, a.base, a.out, a.repeats, a.llm, str(home))
+        for k, v in r["summary"].items():
+            print(f"{k:40} {v}")
+        return 0
     (home / "plans").mkdir(parents=True, exist_ok=True)
     (home / "runs").mkdir(parents=True, exist_ok=True)
 
@@ -63,7 +76,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if a.cmd == "run":
         sp = specmod.load(a.spec)
-        res = launch.launch(sp, home / "runs", a.dry_run)
+        res = launch.launch(sp, home / "runs", a.dry_run, a.override_window,
+                            on_step=lambda st, tx: print(f"  {st}: {tx}", flush=True))
         print(json.dumps(res, indent=1, default=str))
         return 0 if res["ok"] else 1
     if a.cmd == "status":
